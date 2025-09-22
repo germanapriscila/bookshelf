@@ -1,57 +1,56 @@
 "use client";
 
-import { useState } from 'react';
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { useBooks } from "@/contexts/BookContext";
+import { Book } from "@/types/book";
 
-interface Book {
-  id: number;
-  title: string;
-  author: string;
-  totalPages: number;
-  currentPage: number;
-  status: string;
-  isbn?: string;
-  coverUrl?: string;
-  genre: string;
-  rating: number;
-  notes?: string;
-}
-
-export default function EditBookPage({ params }: { params: { id: string } }) {
+export default function EditBookClient() {
   const router = useRouter();
+  const params = useParams();
+  const idParam = params.id;
+  const id = Array.isArray(idParam) ? idParam[0] : idParam ?? "";
+  const { getBookById } = useBooks();
+  const [book, setBook] = useState<Book | null>(null);
 
-  const [book, setBook] = useState<Book>({
-    id: Number(params.id),
-    title: "Dom Casmurro",
-    author: "Machado de Assis",
-    totalPages: 256,
-    currentPage: 0,
-    status: "Quero ler",
-    isbn: "",
-    coverUrl:
-      "https://upload.wikimedia.org/wikipedia/commons/0/05/DomCasmurro.jpg",
-    genre: "Literatura Brasileira",
-    rating: 4,
-    notes:
-      "Uma das obras mais importantes da literatura brasileira, Dom Casmurro narra a história de Bentinho e sua obsessão por Capitu.",
-  });
+  useEffect(() => {
+    console.log("ID recebido:", id);
+    if (!id) {
+      router.push("/books");
+      return;
+    }
+    const bookData = getBookById(id);
+    if (bookData) {
+      setBook(bookData);
+    } else {
+      router.push("/books");
+    }
+  }, [id, getBookById, router]);
 
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >
   ) => {
     const { name, value } = e.target;
-    setBook({ ...book, [name]: value });
+    setBook((prev) => prev && { ...prev, [name]: value });
   };
 
   const handleRatingChange = (rating: number) => {
-    setBook({ ...book, rating });
+    setBook((prev) => prev && { ...prev, rating });
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!book) return;
+
     console.log("📘 Livro atualizado:", book);
     router.push(`/books/${book.id}`);
   };
+
+  if (!book) {
+    return <p>Carregando...</p>;
+  }
 
   return (
     <div className="max-w-4xl mx-auto bg-white p-6 rounded-xl shadow-md">
@@ -69,7 +68,6 @@ export default function EditBookPage({ params }: { params: { id: string } }) {
 
       <form onSubmit={handleSubmit}>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          
           <div className="lg:col-span-1">
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -85,9 +83,7 @@ export default function EditBookPage({ params }: { params: { id: string } }) {
             </div>
           </div>
 
-          
           <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
-           
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Título
@@ -101,7 +97,6 @@ export default function EditBookPage({ params }: { params: { id: string } }) {
               />
             </div>
 
-           
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Autor
@@ -115,7 +110,6 @@ export default function EditBookPage({ params }: { params: { id: string } }) {
               />
             </div>
 
-           
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Total de páginas
@@ -123,13 +117,12 @@ export default function EditBookPage({ params }: { params: { id: string } }) {
               <input
                 type="number"
                 name="totalPages"
-                value={book.totalPages}
+                value={book.totalPages ?? 0}
                 onChange={handleChange}
                 className="w-full border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
 
-            
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Página atual
@@ -137,13 +130,12 @@ export default function EditBookPage({ params }: { params: { id: string } }) {
               <input
                 type="number"
                 name="currentPage"
-                value={book.currentPage}
+                value={book.currentPage ?? 0}
                 onChange={handleChange}
                 className="w-full border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
 
-           
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Status
@@ -161,7 +153,6 @@ export default function EditBookPage({ params }: { params: { id: string } }) {
               </select>
             </div>
 
-            
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 ISBN
@@ -176,7 +167,6 @@ export default function EditBookPage({ params }: { params: { id: string } }) {
               />
             </div>
 
-            
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 URL da capa
@@ -190,7 +180,6 @@ export default function EditBookPage({ params }: { params: { id: string } }) {
               />
             </div>
 
-           
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Gênero
@@ -204,7 +193,6 @@ export default function EditBookPage({ params }: { params: { id: string } }) {
               />
             </div>
 
-            
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Avaliação
@@ -216,7 +204,9 @@ export default function EditBookPage({ params }: { params: { id: string } }) {
                     type="button"
                     onClick={() => handleRatingChange(star)}
                     className={`text-2xl ${
-                      star <= book.rating ? "text-yellow-400" : "text-gray-300"
+                      book.rating && star <= book.rating
+                        ? "text-yellow-400"
+                        : "text-gray-300"
                     } hover:text-yellow-500 transition-colors`}
                   >
                     ★
@@ -230,7 +220,6 @@ export default function EditBookPage({ params }: { params: { id: string } }) {
           </div>
         </div>
 
-       
         <div className="mt-6">
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Notas
@@ -245,19 +234,27 @@ export default function EditBookPage({ params }: { params: { id: string } }) {
           />
         </div>
 
-       
         <div className="mt-6">
           <div className="flex justify-between items-center mb-2">
-            <label className="text-sm font-medium text-gray-700">Progresso</label>
+            <label className="text-sm font-medium text-gray-700">
+              Progresso
+            </label>
             <span className="text-sm text-gray-600">
-              {book.currentPage}/{book.totalPages} ({Math.round((book.currentPage / book.totalPages) * 100)}%)
+              {book.currentPage ?? 0}/{book.totalPages ?? 0} (
+              {book.totalPages
+                ? Math.round(((book.currentPage ?? 0) / book.totalPages) * 100)
+                : 0}
+              %)
             </span>
           </div>
           <div className="w-full bg-gray-200 rounded-full h-2">
             <div
               className="bg-blue-600 h-2 rounded-full transition-all duration-300"
               style={{
-                width: `${Math.min((book.currentPage / book.totalPages) * 100, 100)}%`,
+                width: `${Math.min(
+                  ((book.currentPage ?? 0) / (book.totalPages ?? 1)) * 100,
+                  100
+                )}%`,
               }}
             ></div>
           </div>
@@ -266,7 +263,6 @@ export default function EditBookPage({ params }: { params: { id: string } }) {
           </p>
         </div>
 
-       
         <div className="flex justify-end mt-8 space-x-4">
           <button
             type="button"

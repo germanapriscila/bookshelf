@@ -21,13 +21,17 @@ export interface Book {
   id: string;
   title: string;
   author: string;
-  genre?: Genre;
-  year?: number;
+  genre?: string;
   pages?: number;
   currentPage?: number;
+  totalPages?: number;
+  status: 'to-read' | 'reading' | 'finished';
   rating?: number;
+  coverUrl?: string;
   synopsis?: string;
-  cover?: string;
-  status?: ReadingStatus;
+  createdAt: Date;
+  isbn?: string;
   notes?: string;
 }
+
+

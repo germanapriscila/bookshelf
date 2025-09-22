@@ -5,11 +5,14 @@ export interface Book {
   genre?: string;
   pages?: number;
   currentPage?: number;
+  totalPages?: number;
   status: 'to-read' | 'reading' | 'finished';
   rating?: number;
   coverUrl?: string;
   synopsis?: string;
   createdAt: Date;
+  isbn?: string;
+  notes?: string;
 }
 
 export type BookFormData = Omit<Book, 'id' | 'createdAt'>;
