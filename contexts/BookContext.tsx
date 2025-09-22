@@ -1,15 +1,16 @@
-'use client';
+"use client";
 
-import React, { createContext, useContext, useState, ReactNode } from 'react';
-import { Book } from '../types/book';
-import { initialBooks } from '../data/initialBooks';
+import React, { createContext, useContext, useState, ReactNode } from "react";
+import { Book } from "../types/book";
+import { initialBooks } from "../data/initialBooks";
 
 interface BookContextType {
   books: Book[];
-  addBook: (book: Omit<Book, 'id' | 'createdAt'>) => void;
+  addBook: (book: Omit<Book, "id" | "createdAt">) => void;
   updateBook: (id: string, book: Partial<Book>) => void;
   deleteBook: (id: string) => void;
   getBookById: (id: string) => Book | undefined;
+  searchBooks: (input: string) => Book[];
 }
 
 const BookContext = createContext<BookContextType | undefined>(undefined);
@@ -17,39 +18,50 @@ const BookContext = createContext<BookContextType | undefined>(undefined);
 export const BookProvider = ({ children }: { children: ReactNode }) => {
   const [books, setBooks] = useState<Book[]>(initialBooks);
 
-  const addBook = (bookData: Omit<Book, 'id' | 'createdAt'>) => {
+  const addBook = (bookData: Omit<Book, "id" | "createdAt">) => {
     const newBook: Book = {
       ...bookData,
       id: Date.now().toString(),
       createdAt: new Date(),
     };
-    setBooks(prev => [...prev, newBook]);
+    setBooks((prev) => [...prev, newBook]);
+  };
+
+  const searchBooks = (input: string) => {
+    if (!input.trim()) return books;
+    return books.filter(
+      (book) =>
+        book.title.toLowerCase().includes(input.toLowerCase()) ||
+        book.author.toLowerCase().includes(input.toLowerCase()) ||
+        book.genre?.toLowerCase().includes(input.toLowerCase())
+    );
   };
 
   const updateBook = (id: string, bookData: Partial<Book>) => {
-    setBooks(prev => 
-      prev.map(book => 
-        book.id === id ? { ...book, ...bookData } : book
-      )
+    setBooks((prev) =>
+      prev.map((book) => (book.id === id ? { ...book, ...bookData } : book))
     );
   };
 
   const deleteBook = (id: string) => {
-    setBooks(prev => prev.filter(book => book.id !== id));
+    setBooks((prev) => prev.filter((book) => book.id !== id));
   };
 
   const getBookById = (id: string) => {
-    return books.find(book => book.id === id);
+    return books.find((book) => book.id === id);
   };
 
   return (
-    <BookContext.Provider value={{
-      books,
-      addBook,
-      updateBook,
-      deleteBook,
-      getBookById
-    }}>
+    <BookContext.Provider
+      value={{
+        books,
+        addBook,
+        updateBook,
+        deleteBook,
+        getBookById,
+        searchBooks,
+      }}
+    >
       {children}
     </BookContext.Provider>
   );
@@ -58,7 +70,7 @@ export const BookProvider = ({ children }: { children: ReactNode }) => {
 export const useBooks = () => {
   const context = useContext(BookContext);
   if (!context) {
-    throw new Error('useBooks must be used within BookProvider');
+    throw new Error("useBooks must be used within BookProvider");
   }
   return context;
 };
