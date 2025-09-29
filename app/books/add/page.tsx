@@ -26,6 +26,19 @@ type Livro = {
 export default function AdicionarLivro(){
     const [form, setForm] = useState<Partial<Livro>>({});
     const [livros, setLivros] = useState<Livro[]>([]);
+    const [imageUrl, setImageUrl] = useState<string | null>(null);
+
+    const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setForm({ ...form, [name]: value });
+
+    try {
+      const url = new URL(value);
+      setImageUrl(url.href);
+    } catch (error) {
+      setImageUrl(null);
+    }
+  };
 
      const camposTotais = 7;
   const preenchidos = Object.values(form).filter((v) => v && v !== "").length;
@@ -160,11 +173,11 @@ export default function AdicionarLivro(){
                 id="capa"
                 name="capa"
                 value={form.capa || ""}
-                onChange={handleChange}
+                onChange={handleUrlChange}
               />
-              {form.capa && (
+              {imageUrl && (
                 <Image
-                  src={form.capa}
+                  src={imageUrl}
                   alt="Preview da capa"
                   width={160}
                   height={240}
