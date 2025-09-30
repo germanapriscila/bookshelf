@@ -1,31 +1,20 @@
 "use client";
 
-import Image from "next/image";
-import React from "react";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Progress } from "@/components/ui/progress";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useBooks } from "@/contexts/BookContext";
+import { Book } from "@/types/book";
 
-type Livro = {
-  id: number;
-  titulo: string;
-  autor: string;
-  genero?: string;
-  ano?: number;
-  paginas?: number;
-  avaliacao?: number;
-  capa?: string;
-  status: "lendo" | "finalizado" | "pendente";
-  sinopse?: string;
-};
-
-export default function AdicionarLivro() {
-  const [form, setForm] = useState<Partial<Livro>>({});
-  const [livros, setLivros] = useState<Livro[]>([]);
+export default function AddBookPage() {
+  const router = useRouter();
+  const { addBook } = useBooks();
+  const [form, setForm] = useState<Partial<Omit<Book, "id" | "createdAt">>>({});
   const [imageUrl, setImageUrl] = useState<string | null>(null);
 
   const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -40,10 +29,6 @@ export default function AdicionarLivro() {
     }
   };
 
-  const camposTotais = 7;
-  const preenchidos = Object.values(form).filter((v) => v && v !== "").length;
-  const progresso = Math.round((preenchidos / camposTotais) * 100);
-
   const handleChange = (
     e: React.ChangeEvent<
       HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
@@ -55,176 +40,241 @@ export default function AdicionarLivro() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const novoLivro: Livro = {
-      id: Date.now(),
-      titulo: form.titulo || "",
-      autor: form.autor || "",
-      genero: form.genero,
-      ano: form.ano ? Number(form.ano) : undefined,
-      paginas: form.paginas ? Number(form.paginas) : undefined,
-      capa: form.capa,
-      status: (form.status as Livro["status"]) || "pendente",
-      sinopse: form.sinopse,
-    };
-    setLivros([...livros, novoLivro]);
-    setForm({});
+    if (!form.title || !form.author || !form.status) {
+      // Basic validation
+      return;
+    }
+    addBook(form as Omit<Book, "id" | "createdAt">);
+    router.push("/books");
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
-      <Card>
+    <div className="max-w-6xl mx-auto p-8 bg-gray-50 rounded-lg shadow-md">
+      <Card className="overflow-hidden">
         <CardHeader>
-          <CardTitle>Adicionar Novo Livro</CardTitle>
+          <CardTitle className="text-2xl font-bold text-gray-800">
+            Adicionar um Novo Livro à Sua Estante
+          </CardTitle>
         </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="grid gap-4">
-            {/* Título */}
-            <div>
-              <Label htmlFor="titulo">Título</Label>
-              <Input
-                id="titulo"
-                name="titulo"
-                value={form.titulo || ""}
-                onChange={handleChange}
-                required
-              />
+        <CardContent className="p-8">
+          <form onSubmit={handleSubmit}>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
+              {/* Image Preview Column */}
+              <div className="md:col-span-1 flex flex-col items-center">
+                <Label className="mb-4 text-lg font-semibold text-gray-700 self-start">
+                  Capa do Livro
+                </Label>
+                <div className="relative w-full h-96 bg-gray-200 rounded-lg flex items-center justify-center border-2 border-dashed border-gray-300 overflow-hidden">
+                  {imageUrl ? (
+                    <Image
+                      src={imageUrl}
+                      alt="Preview da capa"
+                      layout="fill"
+                      objectFit="cover"
+                      className="rounded-md"
+                      unoptimized
+                    />
+                  ) : (
+                    <div className="text-gray-500 flex flex-col items-center">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-12 w-12 mb-2"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l-1.586-1.586a2 2 0 00-2.828 0L6 14m6-6l.01.01"
+                        />
+                      </svg>
+                      <span className="text-center">Preview da Imagem</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Form Fields Column */}
+              <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-6">
+                <div className="sm:col-span-2">
+                  <Label
+                    htmlFor="title"
+                    className="text-lg font-semibold text-gray-700"
+                  >
+                    Título
+                  </Label>
+                  <Input
+                    id="title"
+                    name="title"
+                    value={form.title || ""}
+                    onChange={handleChange}
+                    required
+                    className="mt-2 p-3 text-base"
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <Label
+                    htmlFor="author"
+                    className="text-lg font-semibold text-gray-700"
+                  >
+                    Autor
+                  </Label>
+                  <Input
+                    id="author"
+                    name="author"
+                    value={form.author || ""}
+                    onChange={handleChange}
+                    required
+                    className="mt-2 p-3 text-base"
+                  />
+                </div>
+                <div>
+                  <Label
+                    htmlFor="genre"
+                    className="text-lg font-semibold text-gray-700"
+                  >
+                    Gênero
+                  </Label>
+                  <Input
+                    id="genre"
+                    name="genre"
+                    value={form.genre || ""}
+                    onChange={handleChange}
+                    className="mt-2 p-3 text-base"
+                  />
+                </div>
+                <div>
+                  <Label
+                    htmlFor="status"
+                    className="text-lg font-semibold text-gray-700"
+                  >
+                    Status
+                  </Label>
+                  <select
+                    id="status"
+                    name="status"
+                    className="w-full border rounded-lg p-3 mt-2 text-base"
+                    value={form.status || ""}
+                    onChange={handleChange}
+                    required
+                  >
+                    <option value="">Selecione o status</option>
+                    <option value="to-read">Para Ler</option>
+                    <option value="reading">Lendo</option>
+                    <option value="finished">Finalizado</option>
+                  </select>
+                </div>
+                <div>
+                  <Label
+                    htmlFor="totalPages"
+                    className="text-lg font-semibold text-gray-700"
+                  >
+                    Total de Páginas
+                  </Label>
+                  <Input
+                    type="number"
+                    id="totalPages"
+                    name="totalPages"
+                    value={form.totalPages || ""}
+                    onChange={handleChange}
+                    className="mt-2 p-3 text-base"
+                  />
+                </div>
+                <div>
+                  <Label
+                    htmlFor="currentPage"
+                    className="text-lg font-semibold text-gray-700"
+                  >
+                    Página Atual
+                  </Label>
+                  <Input
+                    type="number"
+                    id="currentPage"
+                    name="currentPage"
+                    value={form.currentPage || ""}
+                    onChange={handleChange}
+                    className="mt-2 p-3 text-base"
+                  />
+                </div>
+                <div>
+                  <Label
+                    htmlFor="rating"
+                    className="text-lg font-semibold text-gray-700"
+                  >
+                    Avaliação (0 a 5)
+                  </Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    max="5"
+                    id="rating"
+                    name="rating"
+                    value={form.rating || ""}
+                    onChange={handleChange}
+                    className="mt-2 p-3 text-base"
+                  />
+                </div>
+                <div>
+                  <Label
+                    htmlFor="isbn"
+                    className="text-lg font-semibold text-gray-700"
+                  >
+                    ISBN
+                  </Label>
+                  <Input
+                    id="isbn"
+                    name="isbn"
+                    value={form.isbn || ""}
+                    onChange={handleChange}
+                    className="mt-2 p-3 text-base"
+                  />
+                </div>
+
+                <div className="sm:col-span-2">
+                  <Label
+                    htmlFor="isbn"
+                    className="text-lg font-semibold text-gray-700"
+                  >
+                    URL da Imagem.
+                  </Label>
+                  <Input
+                    id="coverUrl"
+                    name="coverUrl"
+                    placeholder="Cole a URL da imagem da capa"
+                    value={form.coverUrl || ""}
+                    onChange={handleUrlChange}
+                    className="mt-2 p-3 text-base"
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <Label
+                    htmlFor="synopsis"
+                    className="text-lg font-semibold text-gray-700"
+                  >
+                    Sinopse
+                  </Label>
+                  <Textarea
+                    id="synopsis"
+                    name="synopsis"
+                    value={form.synopsis || ""}
+                    onChange={handleChange}
+                    className="mt-2 p-3 text-base"
+                    rows={5}
+                  />
+                </div>
+              </div>
             </div>
 
-            {/* Autor */}
-            <div>
-              <Label htmlFor="autor">Autor</Label>
-              <Input
-                id="autor"
-                name="autor"
-                value={form.autor || ""}
-                onChange={handleChange}
-                required
-              />
+            <div className="flex justify-end mt-12">
+              <Button type="submit" className="px-8 py-4 text-lg font-bold">
+                Adicionar Livro
+              </Button>
             </div>
-
-            {/* Gênero */}
-            <div>
-              <Label htmlFor="genero">Gênero</Label>
-              <Input
-                id="genero"
-                name="genero"
-                value={form.genero || ""}
-                onChange={handleChange}
-              />
-            </div>
-
-            {/* Ano */}
-            <div>
-              <Label htmlFor="ano">Ano de Publicação</Label>
-              <Input
-                type="number"
-                id="ano"
-                name="ano"
-                value={form.ano || ""}
-                onChange={handleChange}
-              />
-            </div>
-
-            {/* Páginas */}
-            <div>
-              <Label htmlFor="paginas">Número de Páginas</Label>
-              <Input
-                type="number"
-                id="paginas"
-                name="paginas"
-                value={form.paginas || ""}
-                onChange={handleChange}
-              />
-            </div>
-
-            {/* Avaliação */}
-            <div>
-              <Label htmlFor="avaliacao">Avaliação (0 a 5)</Label>
-              <Input
-                type="number"
-                min="0"
-                max="5"
-                id="avaliacao"
-                name="avaliacao"
-                value={form.avaliacao || ""}
-                onChange={handleChange}
-              />
-            </div>
-
-            {/* Status */}
-            <div>
-              <Label htmlFor="status">Status</Label>
-              <select
-                id="status"
-                name="status"
-                className="w-full border rounded p-2"
-                value={form.status || ""}
-                onChange={handleChange}
-              >
-                <option value="">Selecione</option>
-                <option value="pendente">Pendente</option>
-                <option value="lendo">Lendo</option>
-                <option value="finalizado">Finalizado</option>
-              </select>
-            </div>
-
-            {/* Capa */}
-            <div>
-              <Label htmlFor="capa">URL da Capa</Label>
-              <Input
-                id="capa"
-                name="capa"
-                value={form.capa || ""}
-                onChange={handleUrlChange}
-              />
-              {imageUrl && (
-                <Image
-                  src={imageUrl}
-                  alt="Preview da capa"
-                  width={160}
-                  height={240}
-                  className="object-cover rounded shadow"
-                  unoptimized
-                />
-              )}
-            </div>
-
-            {/* Sinopse */}
-            <div>
-              <Label htmlFor="sinopse">Sinopse</Label>
-              <Textarea
-                id="sinopse"
-                name="sinopse"
-                value={form.sinopse || ""}
-                onChange={handleChange}
-              />
-            </div>
-
-            {/* Barra de Progresso */}
-            <div>
-              <Label>Progresso do Preenchimento</Label>
-              <Progress value={progresso} className="mt-1" />
-              <p className="text-sm text-muted-foreground mt-1">
-                {progresso}% completo
-              </p>
-            </div>
-
-            <Button type="submit">Adicionar Livro</Button>
           </form>
         </CardContent>
       </Card>
-
-      {/* Lista de livros adicionados */}
-      <div className="mt-6">
-        <h2 className="text-xl font-bold mb-2">Livros Adicionados</h2>
-        <ul className="space-y-2">
-          {livros.map((livro) => (
-            <li key={livro.id} className="p-2 border rounded">
-              <strong>{livro.titulo}</strong> — {livro.autor}
-            </li>
-          ))}
-        </ul>
-      </div>
     </div>
   );
 }

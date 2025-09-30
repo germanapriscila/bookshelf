@@ -29,11 +29,12 @@ export const BookProvider = ({ children }: { children: ReactNode }) => {
 
   const searchBooks = (input: string) => {
     if (!input.trim()) return books;
+    const lowercasedInput = input.toLowerCase();
     return books.filter(
       (book) =>
-        book.title.toLowerCase().includes(input.toLowerCase()) ||
-        book.author.toLowerCase().includes(input.toLowerCase()) ||
-        book.genre?.toLowerCase().includes(input.toLowerCase())
+        book.title.toLowerCase().includes(lowercasedInput) ||
+        book.author.toLowerCase().includes(lowercasedInput) ||
+        (book.genre && book.genre.toLowerCase().includes(lowercasedInput))
     );
   };
 
