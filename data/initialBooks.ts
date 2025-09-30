@@ -12,6 +12,7 @@ export const initialBooks: Book[] = [
     rating: 5,
     synopsis: 'Um dos maiores clássicos da literatura brasileira.',
     createdAt: new Date('2024-01-15T10:00:00Z'),
+    coverUrl: "https://editorapaulus.vtexassets.com/arquivos/ids/158673/o-pequeno-principe-capa-dura.png?v=637908989373070000"
   },
   {
     id: '2',

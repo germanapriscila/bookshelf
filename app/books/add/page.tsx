@@ -1,6 +1,6 @@
 "use client";
 
-import Image from 'next/image';
+import Image from "next/image";
 import React from "react";
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
@@ -11,24 +11,24 @@ import { Progress } from "@/components/ui/progress";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 type Livro = {
-    id: number;
-    titulo: string;
-    autor: string;
-    genero?: string;
-    ano?: number;
-    paginas?: number;
-    avaliacao?: number;
-    capa?: string;
-    status: 'lendo' | 'finalizado' | 'pendente';
-    sinopse?: string;
+  id: number;
+  titulo: string;
+  autor: string;
+  genero?: string;
+  ano?: number;
+  paginas?: number;
+  avaliacao?: number;
+  capa?: string;
+  status: "lendo" | "finalizado" | "pendente";
+  sinopse?: string;
 };
 
-export default function AdicionarLivro(){
-    const [form, setForm] = useState<Partial<Livro>>({});
-    const [livros, setLivros] = useState<Livro[]>([]);
-    const [imageUrl, setImageUrl] = useState<string | null>(null);
+export default function AdicionarLivro() {
+  const [form, setForm] = useState<Partial<Livro>>({});
+  const [livros, setLivros] = useState<Livro[]>([]);
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
 
-    const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setForm({ ...form, [name]: value });
 
@@ -40,12 +40,14 @@ export default function AdicionarLivro(){
     }
   };
 
-     const camposTotais = 7;
+  const camposTotais = 7;
   const preenchidos = Object.values(form).filter((v) => v && v !== "").length;
   const progresso = Math.round((preenchidos / camposTotais) * 100);
 
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >
   ) => {
     const { name, value } = e.target;
     setForm({ ...form, [name]: value });
@@ -182,6 +184,7 @@ export default function AdicionarLivro(){
                   width={160}
                   height={240}
                   className="object-cover rounded shadow"
+                  unoptimized
                 />
               )}
             </div>

@@ -10,7 +10,7 @@ export default function EditBookClient() {
   const params = useParams();
   const idParam = params.id;
   const id = Array.isArray(idParam) ? idParam[0] : idParam ?? "";
-  const { getBookById } = useBooks();
+  const { getBookById, updateBook } = useBooks();
   const [book, setBook] = useState<Book | null>(null);
 
   useEffect(() => {
@@ -44,7 +44,7 @@ export default function EditBookClient() {
     e.preventDefault();
     if (!book) return;
 
-    console.log("📘 Livro atualizado:", book);
+    updateBook(book.id, book);
     router.push(`/books/${book.id}`);
   };
 
