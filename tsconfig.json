@@ -21,7 +21,6 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "incremental": true,
-    "baseUrl": ".",
     "plugins": [
       {
         "name": "next"

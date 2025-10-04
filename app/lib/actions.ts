@@ -1,0 +1,164 @@
+'use server'
+
+import { revalidatePath } from 'next/cache';
+import { Book } from '@/app/types/book';
+
+// Função auxiliar para construir URLs absolutas
+const BASE_URL = process.env.VERCEL_URL
+    ? `https://${process.env.VERCEL_URL}`
+    : 'http://localhost:3000';
+
+// Server action to create a new book
+export async function addBook(book: Omit<Book, 'id' | 'createdAt'>) {
+    const response = await fetch(`${BASE_URL}/api/books`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(book),
+        cache: 'no-store'
+    });
+
+    if (!response.ok) {
+        throw new Error('Failed to add book');
+    }
+
+    revalidatePath('/books');
+    return response.json();
+}
+
+// Server action to update a book
+export async function updateBook(id: string, book: Partial<Book>) {
+    const response = await fetch(`${BASE_URL}/api/books/${id}`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(book),
+        cache: 'no-store'
+    });
+
+    if (!response.ok) {
+        throw new Error('Failed to update book');
+    }
+
+    revalidatePath('/books');
+    revalidatePath(`/books/${id}`);
+    return response.json();
+}
+
+// Server action to delete a book
+export async function deleteBook(id: string) {
+    try {
+        const response = await fetch(`${BASE_URL}/api/books/${id}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            cache: 'no-store'
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ error: 'Erro desconhecido' }));
+            if (response.status === 404) {
+                throw new Error('Livro não encontrado');
+            } else {
+                throw new Error(errorData.error || 'Erro ao excluir o livro');
+            }
+        }
+
+        revalidatePath('/books');
+        return true;
+    } catch (error) {
+        console.error('Error deleting book:', error);
+        if (error instanceof Error) {
+            throw error;
+        }
+        throw new Error('Erro ao excluir o livro. Por favor, tente novamente.');
+    }
+}
+
+// Server action to get a book by ID
+export async function getBook(id: string) {
+    const response = await fetch(`${BASE_URL}/api/books/${id}`, {
+        cache: 'no-store'
+    });
+
+    if (!response.ok) {
+        throw new Error('Book not found');
+    }
+
+    return response.json();
+}
+
+// Server action to get all books
+export async function getBooks() {
+    const response = await fetch(`${BASE_URL}/api/books`, {
+        cache: 'no-store',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    });
+
+    if (!response.ok) {
+        throw new Error('Failed to fetch books');
+    }
+
+    return response.json();
+}
+
+// Server action to get all genres
+export async function getGenres() {
+    const response = await fetch(`${BASE_URL}/api/categories`, {
+        cache: 'no-store',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    });
+
+    if (!response.ok) {
+        throw new Error('Failed to fetch genres');
+    }
+
+    return response.json();
+}
+
+// Server action to add a new genre
+export async function addGenre(genre: string) {
+    const response = await fetch(`${BASE_URL}/api/categories`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ genre }),
+        cache: 'no-store'
+    });
+
+    if (!response.ok) {
+        throw new Error('Failed to add genre');
+    }
+
+    revalidatePath('/books');
+    return response.json();
+}
+
+// Server action to delete a genre
+export async function deleteGenre(genre: string) {
+    const response = await fetch(
+        `${BASE_URL}/api/categories/genres/${encodeURIComponent(genre)}`,
+        {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            cache: 'no-store'
+        }
+    );
+
+    if (!response.ok) {
+        throw new Error('Failed to delete genre');
+    }
+
+    revalidatePath('/books');
+    return true;
+}
