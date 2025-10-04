@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { useBooks } from "@/contexts/BookContext";
+import { getBook, updateBook } from "@/app/lib/actions";
 import { Book } from "@/types/book";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -18,8 +18,6 @@ export default function EditBookPage() {
   const router = useRouter();
   const params = useParams();
   const id = Array.isArray(params.id) ? params.id[0] : params.id ?? "";
-  const { getBookById, updateBook } = useBooks();
-
   const [formData, setFormData] = useState<Book | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -28,13 +26,19 @@ export default function EditBookPage() {
       router.push("/books");
       return;
     }
-    const bookData = getBookById(id);
-    if (bookData) {
-      setFormData(bookData);
-    } else {
-      router.push("/books");
-    }
-  }, [id, getBookById, router]);
+
+    const loadBook = async () => {
+      try {
+        const bookData = await getBook(id);
+        setFormData(bookData);
+      } catch (error) {
+        console.error("Erro ao carregar livro:", error);
+        router.push("/books");
+      }
+    };
+
+    loadBook();
+  }, [id, router]);
 
   const handleChange = (
     e: React.ChangeEvent<
@@ -75,8 +79,9 @@ export default function EditBookPage() {
     setIsSubmitting(true);
 
     try {
-      updateBook(formData.id, formData);
+      await updateBook(formData.id, formData);
       router.push(`/books/${formData.id}`);
+      router.refresh();
     } catch (error) {
       console.error("Erro ao atualizar livro:", error);
       alert("Erro ao atualizar livro");
@@ -131,7 +136,7 @@ export default function EditBookPage() {
                 <Input
                   id="title"
                   name="title"
-                  value={formData.title || ''}
+                  value={formData.title || ""}
                   onChange={handleChange}
                   required
                 />
@@ -143,7 +148,7 @@ export default function EditBookPage() {
                 <Input
                   id="author"
                   name="author"
-                  value={formData.author || ''}
+                  value={formData.author || ""}
                   onChange={handleChange}
                   required
                 />
@@ -167,7 +172,7 @@ export default function EditBookPage() {
                 <select
                   id="status"
                   name="status"
-                  value={formData.status || ''}
+                  value={formData.status || ""}
                   onChange={handleChange}
                   className="w-full border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
