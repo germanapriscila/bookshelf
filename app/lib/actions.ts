@@ -10,21 +10,32 @@ const BASE_URL = process.env.VERCEL_URL
 
 // Server action to create a new book
 export async function addBook(book: Omit<Book, 'id' | 'createdAt'>) {
-    const response = await fetch(`${BASE_URL}/api/books`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(book),
-        cache: 'no-store'
-    });
+    try {
+        if (!book.title || !book.author || !book.status) {
+            throw new Error('Título, autor e status são obrigatórios');
+        }
 
-    if (!response.ok) {
-        throw new Error('Failed to add book');
+        const response = await fetch(`${BASE_URL}/api/books`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(book),
+            cache: 'no-store'
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ error: 'Erro desconhecido' }));
+            throw new Error(errorData.error || 'Erro ao adicionar livro');
+        }
+
+        revalidatePath('/books');
+        const newBook = await response.json();
+        return newBook;
+    } catch (error) {
+        console.error('Error adding book:', error);
+        throw error instanceof Error ? error : new Error('Erro ao adicionar livro');
     }
-
-    revalidatePath('/books');
-    return response.json();
 }
 
 // Server action to update a book

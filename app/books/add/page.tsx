@@ -8,13 +8,16 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useBooks } from "@/contexts/BookContext";
+import { addBook } from "@/app/lib/actions";
 import { Book } from "@/types/book";
 
 export default function AddBookPage() {
   const router = useRouter();
-  const { addBook } = useBooks();
-  const [form, setForm] = useState<Partial<Omit<Book, "id" | "createdAt">>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [form, setForm] = useState<Partial<Omit<Book, "id" | "createdAt">>>({
+    status: "to-read", // Default status
+  });
   const [imageUrl, setImageUrl] = useState<string | null>(null);
 
   const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
