@@ -1,8 +1,8 @@
 "use client";
 
-import React, { createContext, useContext, useState, ReactNode } from "react";
-import { Book } from "../types/book";
+import { createContext, ReactNode, useContext, useState } from "react";
 import { initialBooks } from "../data/initialBooks";
+import { Book } from "../types/book";
 
 interface BookContextType {
   books: Book[];
