@@ -9,16 +9,22 @@ import { deleteBook } from "@/app/lib/actions";
 import { useRouter } from "next/navigation";
 
 const statusLabels = {
-  "to-read": "Para Ler",
-  reading: "Lendo",
-  finished: "Finalizado",
-};
+  TO_READ: "Para Ler",
+  READING: "Lendo",
+  READ: "Lido",
+  PAUSED: "Pausado",
+  FINISHED: "Finalizado",
+  ABANDONED: "Abandonado",
+} as const;
 
 const statusColors = {
-  "to-read": "bg-gray-100 text-gray-800",
-  reading: "bg-blue-100 text-blue-800",
-  finished: "bg-green-100 text-green-800",
-};
+  TO_READ: "bg-gray-100 text-gray-800",
+  READING: "bg-blue-100 text-blue-800",
+  READ: "bg-green-100 text-green-800",
+  PAUSED: "bg-yellow-100 text-yellow-800",
+  FINISHED: "bg-green-100 text-green-800",
+  ABANDONED: "bg-red-100 text-red-800",
+} as const;
 
 interface BookCardProps {
   book: Book;
@@ -30,12 +36,12 @@ export function ClientBookCard({ book }: BookCardProps) {
 
   const handleDeleteConfirm = async () => {
     try {
-      await deleteBook(book.id);
+      await deleteBook(book.id.toString());
       setIsDeleteModalOpen(false);
       router.refresh();
     } catch (error) {
       console.error("Error deleting book:", error);
-      throw error; // Propaga o erro para o modal tratar
+      throw error;
     }
   };
 
@@ -68,17 +74,31 @@ export function ClientBookCard({ book }: BookCardProps) {
                 </span>
               </div>
               <p className="text-sm text-gray-600 mt-1">por {book.author}</p>
+
+              {/* Gêneros logo abaixo do autor */}
+              {book.genres && book.genres.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  {book.genres.slice(0, 3).map((genre) => (
+                    <span
+                      key={genre.id}
+                      className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100"
+                    >
+                      {genre.title}
+                    </span>
+                  ))}
+                  {book.genres.length > 3 && (
+                    <span className="inline-flex items-center px-2 py-0.5 text-xs text-gray-500">
+                      +{book.genres.length - 3}
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-2">
-              {book.genre && (
-                <p className="text-sm text-gray-500">
-                  <span className="font-medium">Gênero:</span> {book.genre}
-                </p>
-              )}
               {book.totalPages && (
                 <p className="text-sm text-gray-500">
                   <span className="font-medium">Páginas:</span>{" "}

@@ -11,17 +11,21 @@ export default async function BooksPage({
   searchParams: { q?: string };
 }) {
   const books = await getBooks();
-  
+
   const filteredBooks = books.filter((book: Book) => {
     if (!searchParams.q) return true;
-    
-    const searchTerms = searchParams.q.toLowerCase().split(' ');
-    
-    return searchTerms.every(term =>
-      book.title.toLowerCase().includes(term) ||
-      book.author.toLowerCase().includes(term) ||
-      (book.genre && book.genre.toLowerCase().includes(term)) ||
-      (book.synopsis && book.synopsis.toLowerCase().includes(term))
+
+    const searchTerms = searchParams.q.toLowerCase().split(" ");
+
+    return searchTerms.every(
+      (term) =>
+        book.title.toLowerCase().includes(term) ||
+        book.author.toLowerCase().includes(term) ||
+        (book.genres &&
+          book.genres.some((genre) =>
+            genre.title.toLowerCase().includes(term)
+          )) ||
+        (book.synopsis && book.synopsis.toLowerCase().includes(term))
     );
   });
 
@@ -63,7 +67,7 @@ export default async function BooksPage({
           </Link>
         </div>
       )}
-      
+
       {books.length > 0 && filteredBooks.length === 0 && (
         <div className="text-center py-8">
           <p className="text-gray-500">

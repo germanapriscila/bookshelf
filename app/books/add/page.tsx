@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Input } from "@/components/ui/input";
@@ -9,16 +9,48 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { addBook } from "@/app/lib/actions";
-import { Book } from "@/types/book";
+import { Book, BookStatus, Genre } from "@/app/types/book";
 
 export default function AddBookPage() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [form, setForm] = useState<Partial<Omit<Book, "id" | "createdAt">>>({
-    status: "to-read", // Default status
+  const [genres, setGenres] = useState<Genre[]>([]);
+  const [selectedGenres, setSelectedGenres] = useState<number[]>([]);
+  const [isGenresOpen, setIsGenresOpen] = useState(false);
+  const [genreSearch, setGenreSearch] = useState("");
+  const [form, setForm] = useState<
+    Partial<Omit<Book, "id" | "createdAt" | "genres">>
+  >({
+    status: "TO_READ" as BookStatus,
   });
+
+  const filteredGenres = genres.filter((genre) =>
+    genre.title.toLowerCase().includes(genreSearch.toLowerCase())
+  );
   const [imageUrl, setImageUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Buscar gêneros quando o componente montar
+    fetch("/api/genres")
+      .then((res) => res.json())
+      .then((data) => setGenres(data))
+      .catch((err) => console.error("Erro ao carregar gêneros:", err));
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (isGenresOpen && !target.closest("[data-genres-dropdown]")) {
+        setIsGenresOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isGenresOpen]);
 
   const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -41,14 +73,44 @@ export default function AddBookPage() {
     setForm({ ...form, [name]: value });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleGenreChange = (genreId: number) => {
+    setSelectedGenres((prev) => {
+      if (prev.includes(genreId)) {
+        return prev.filter((id) => id !== genreId);
+      } else {
+        return [...prev, genreId];
+      }
+    });
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.title || !form.author || !form.status) {
-      // Basic validation
-      return;
+    setIsSubmitting(true);
+    setError(null);
+
+    try {
+      if (!form.title || !form.author || !form.status) {
+        setError("Título, autor e status são obrigatórios");
+        return;
+      }
+
+      const bookData = {
+        ...form,
+        genres: selectedGenres.map((id) => ({ id })),
+        rating: form.rating ? Number(form.rating) : undefined,
+        pages: form.pages ? Number(form.pages) : undefined,
+        currentPage: form.currentPage ? Number(form.currentPage) : undefined,
+        totalPages: form.totalPages ? Number(form.totalPages) : undefined,
+        isbn: form.isbn ? Number(form.isbn) : undefined,
+      };
+
+      await addBook(bookData as Omit<Book, "id" | "createdAt">);
+      router.push("/books");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Erro ao adicionar livro");
+    } finally {
+      setIsSubmitting(false);
     }
-    addBook(form as Omit<Book, "id" | "createdAt">);
-    router.push("/books");
   };
 
   return (
@@ -133,22 +195,8 @@ export default function AddBookPage() {
                     className="mt-2 p-3 text-base"
                   />
                 </div>
-                <div>
-                  <Label
-                    htmlFor="genre"
-                    className="text-lg font-semibold text-gray-700"
-                  >
-                    Gênero
-                  </Label>
-                  <Input
-                    id="genre"
-                    name="genre"
-                    value={form.genre || ""}
-                    onChange={handleChange}
-                    className="mt-2 p-3 text-base"
-                  />
-                </div>
-                <div>
+
+                <div className="sm:col-span-2">
                   <Label
                     htmlFor="status"
                     className="text-lg font-semibold text-gray-700"
@@ -164,10 +212,165 @@ export default function AddBookPage() {
                     required
                   >
                     <option value="">Selecione o status</option>
-                    <option value="to-read">Para Ler</option>
-                    <option value="reading">Lendo</option>
-                    <option value="finished">Finalizado</option>
+                    <option value="TO_READ">Para Ler</option>
+                    <option value="READING">Lendo</option>
+                    <option value="READ">Lido</option>
+                    <option value="PAUSED">Pausado</option>
+                    <option value="FINISHED">Finalizado</option>
+                    <option value="ABANDONED">Abandonado</option>
                   </select>
+                </div>
+                <div className="sm:col-span-2">
+                  <Label
+                    htmlFor="genres"
+                    className="text-lg font-semibold text-gray-700"
+                  >
+                    Gêneros
+                  </Label>
+                  <div className="relative mt-2">
+                    <button
+                      type="button"
+                      data-genres-dropdown
+                      onClick={() => setIsGenresOpen(!isGenresOpen)}
+                      className="w-full flex items-center justify-between p-3 text-left border rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <span className="text-sm text-gray-700">
+                        {selectedGenres.length > 0
+                          ? `${selectedGenres.length} ${
+                              selectedGenres.length === 1 ? "gênero" : "gêneros"
+                            } selecionado${
+                              selectedGenres.length === 1 ? "" : "s"
+                            }`
+                          : "Selecione os gêneros"}
+                      </span>
+                      <svg
+                        className={`w-5 h-5 text-gray-500 transition-transform ${
+                          isGenresOpen ? "rotate-180" : ""
+                        }`}
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M19 9l-7 7-7-7"
+                        />
+                      </svg>
+                    </button>
+
+                    {/* Dropdown de Gêneros */}
+                    {isGenresOpen && (
+                      <div
+                        data-genres-dropdown
+                        className="absolute z-10 mt-1 w-full bg-white border rounded-lg shadow-lg"
+                      >
+                        <div className="p-3 border-b">
+                          <div className="relative">
+                            <input
+                              type="text"
+                              value={genreSearch}
+                              onChange={(e) => setGenreSearch(e.target.value)}
+                              placeholder="Buscar gêneros..."
+                              className="w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                            <svg
+                              className="absolute right-3 top-2.5 w-4 h-4 text-gray-400"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                              />
+                            </svg>
+                          </div>
+                        </div>
+
+                        {/* Lista de Gêneros */}
+                        <div className="max-h-60 overflow-y-auto p-2">
+                          {filteredGenres.length === 0 ? (
+                            <div className="text-center py-4 text-gray-500">
+                              Nenhum gênero encontrado
+                            </div>
+                          ) : (
+                            filteredGenres.map((genre) => (
+                              <div
+                                key={genre.id}
+                                onClick={() => handleGenreChange(genre.id)}
+                                className={`flex items-center gap-2 p-2 rounded cursor-pointer ${
+                                  selectedGenres.includes(genre.id)
+                                    ? "bg-blue-50 text-blue-700"
+                                    : "hover:bg-gray-50"
+                                }`}
+                              >
+                                <div
+                                  className={`w-4 h-4 rounded border flex items-center justify-center ${
+                                    selectedGenres.includes(genre.id)
+                                      ? "bg-blue-500 border-blue-500"
+                                      : "border-gray-300"
+                                  }`}
+                                >
+                                  {selectedGenres.includes(genre.id) && (
+                                    <svg
+                                      className="w-3 h-3 text-white"
+                                      fill="none"
+                                      viewBox="0 0 24 24"
+                                      stroke="currentColor"
+                                    >
+                                      <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M5 13l4 4L19 7"
+                                      />
+                                    </svg>
+                                  )}
+                                </div>
+                                <span className="text-sm">{genre.title}</span>
+                              </div>
+                            ))
+                          )}
+                        </div>
+
+                        {/* Rodapé com Tags */}
+                        {selectedGenres.length > 0 && (
+                          <div className="p-3 border-t bg-gray-50">
+                            <div className="flex flex-wrap gap-2">
+                              {selectedGenres.map((genreId) => {
+                                const genre = genres.find(
+                                  (g) => g.id === genreId
+                                );
+                                if (!genre) return null;
+                                return (
+                                  <span
+                                    key={genre.id}
+                                    className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700"
+                                  >
+                                    {genre.title}
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleGenreChange(genre.id);
+                                      }}
+                                      className="hover:text-blue-900"
+                                    >
+                                      ×
+                                    </button>
+                                  </span>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <div>
                   <Label
@@ -270,9 +473,18 @@ export default function AddBookPage() {
               </div>
             </div>
 
+            {error && (
+              <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-600">
+                {error}
+              </div>
+            )}
             <div className="flex justify-end mt-12">
-              <Button type="submit" className="px-8 py-4 text-lg font-bold">
-                Adicionar Livro
+              <Button
+                type="submit"
+                className="px-8 py-4 text-lg font-bold"
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? "Adicionando..." : "Adicionar Livro"}
               </Button>
             </div>
           </form>

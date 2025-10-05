@@ -25,8 +25,18 @@ export async function addBook(book: Omit<Book, 'id' | 'createdAt'>) {
         });
 
         if (!response.ok) {
-            const errorData = await response.json().catch(() => ({ error: 'Erro desconhecido' }));
-            throw new Error(errorData.error || 'Erro ao adicionar livro');
+            const errorData = await response.json().catch(() => ({
+                error: 'Erro na resposta do servidor',
+                details: `Status: ${response.status}`
+            }));
+
+            if (response.status === 400) {
+                throw new Error(errorData.error || 'Dados inválidos fornecidos');
+            } else if (response.status === 500) {
+                throw new Error(errorData.error + (errorData.details ? `: ${errorData.details}` : ''));
+            } else {
+                throw new Error(errorData.error || 'Erro ao adicionar livro');
+            }
         }
 
         revalidatePath('/books');
@@ -41,7 +51,7 @@ export async function addBook(book: Omit<Book, 'id' | 'createdAt'>) {
 // Server action to update a book
 export async function updateBook(id: string, book: Partial<Book>) {
     const response = await fetch(`${BASE_URL}/api/books/${id}`, {
-        method: 'PUT',
+        method: 'PATCH',
         headers: {
             'Content-Type': 'application/json',
         },

@@ -1,4 +1,3 @@
-import { Book } from "@/app/types/book";
 import { prisma } from "../../../lib/prisma";
 
 export async function GET() {
@@ -6,13 +5,16 @@ export async function GET() {
     orderBy: {
       createdAt: "desc",
     },
+    include: {
+      genres: true,
+    },
   });
 
   return Response.json(books);
 }
 
 export async function POST(request: Request) {
-  const body: Book = await request.json();
+  const body = await request.json();
 
   const {
     title,
@@ -29,33 +31,67 @@ export async function POST(request: Request) {
     notes,
   } = body;
 
-  const genreArray = Array.isArray(genres) ? genres : [];
-
-  if (!title || !author) {
+  if (!title || !author || !status) {
     return Response.json(
-      { error: "Título e autor são obrigatórios" },
+      { error: "Título, autor e status são obrigatórios" },
       { status: 400 }
     );
   }
 
+  if (!['TO_READ', 'READING', 'READ', 'PAUSED', 'FINISHED', 'ABANDONED'].includes(status)) {
+    return Response.json(
+      { error: "Status inválido. Use TO_READ, READING, READ, PAUSED, FINISHED ou ABANDONED" },
+      { status: 400 }
+    );
+  }
+
+  const genreArray = Array.isArray(genres) ? genres : [];
+
   try {
-    const newBook = await prisma.book.create({
-      data: {
-        title,
-        author,
+    // Log dos dados recebidos para debug
+    console.log('Dados recebidos:', {
+      title,
+      author,
+      status,
+      genres: genreArray,
+      pages,
+      totalPages,
+      currentPage,
+      rating,
+      coverUrl,
+      synopsis,
+      isbn,
+      notes
+    });
+
+    // Preparar os dados base
+    const baseData = {
+      title,
+      author,
+      status,
+      pages: pages ? Number(pages) : undefined,
+      totalPages: totalPages ? Number(totalPages) : undefined,
+      currentPage: currentPage ? Number(currentPage) : undefined,
+      rating: rating ? Number(rating) : undefined,
+      coverUrl: coverUrl || undefined,
+      synopsis: synopsis || undefined,
+      isbn: isbn ? Number(isbn) : undefined,
+      notes: notes || undefined,
+    };
+
+    // Criar objeto de dados com possíveis gêneros
+    const createData = {
+      ...baseData,
+      ...(genreArray.length > 0 ? {
         genres: {
-          connect: genreArray.map((g: { id: number }) => ({ id: g.id })),
-        },
-        pages: pages ? Number(pages) : null,
-        totalPages: totalPages ? Number(totalPages) : null,
-        currentPage: currentPage ? Number(currentPage) : null,
-        status: status || null,
-        rating: rating ? Number(rating) : null,
-        coverUrl: coverUrl || null,
-        synopsis: synopsis || null,
-        isbn: isbn || null,
-        notes: notes || null,
-      },
+          connect: genreArray.map((g: { id: number }) => ({ id: Number(g.id) }))
+        }
+      } : {})
+    };
+
+    // Criar o livro
+    const newBook = await prisma.book.create({
+      data: createData,
       include: {
         genres: true,
       },
@@ -63,7 +99,19 @@ export async function POST(request: Request) {
 
     return Response.json(newBook, { status: 201 });
   } catch (error) {
-    return Response.json({ error: "Erro ao criar livro." }, { status: 500 });
+    // Log do erro para debug
+    console.error('Erro ao criar livro:', error);
+
+    if (error instanceof Error) {
+      return Response.json({
+        error: "Erro ao criar livro",
+        details: error.message
+      }, { status: 500 });
+    }
+
+    return Response.json({
+      error: "Erro desconhecido ao criar livro"
+    }, { status: 500 });
   }
 
 }

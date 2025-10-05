@@ -1,18 +1,31 @@
+export type BookStatus = 'TO_READ' | 'READING' | 'READ' | 'PAUSED' | 'FINISHED' | 'ABANDONED';
+
 export interface Book {
-  id: string;
+  id: number;
   title: string;
   author: string;
-  genre?: string;
+  status: BookStatus;
   pages?: number;
   currentPage?: number;
   totalPages?: number;
-  status: 'to-read' | 'reading' | 'finished';
   rating?: number;
   coverUrl?: string;
   synopsis?: string;
   createdAt: Date;
-  isbn?: string;
+  isbn?: number;
   notes?: string;
+  genres: Genre[];
+}
+
+export interface Genre {
+  id: number;
+  title: string;
+  description?: string;
+}
+
+export interface GenreWithBook extends Genre {
+  bookId?: number;
+  book?: Book;
 }
 
 export type BookFormData = Omit<Book, 'id' | 'createdAt'>;

@@ -1,10 +1,48 @@
 import { prisma } from "../../../../lib/prisma";
 
+export async function GET(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
+  const id = params.id;
+
+  if (!id) {
+    return Response.json(
+      { error: "ID é obrigatório." },
+      { status: 400 }
+    );
+  }
+
+  try {
+    const book = await prisma.book.findUnique({
+      where: { id: Number(id) },
+      include: {
+        genres: true,
+      },
+    });
+
+    if (!book) {
+      return Response.json(
+        { error: "Livro não encontrado." },
+        { status: 404 }
+      );
+    }
+
+    return Response.json(book, { status: 200 });
+  } catch (error) {
+    return Response.json(
+      { error: "Erro ao buscar livro." },
+      { status: 500 }
+    );
+  }
+}
+
 type BookUpdateBody = {
   title?: string;
   author?: string;
   status?: string;
   genres?: { id: number }[];
+  genreIds?: number[];
   pages?: number;
   currentPage?: number;
   totalPages?: number;
@@ -15,9 +53,11 @@ type BookUpdateBody = {
   notes?: string;
 };
 
-export async function PATCH(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const id = searchParams.get("id");
+export async function PATCH(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
+  const id = params.id;
   const body = (await request.json()) as BookUpdateBody;
 
   if (Object.keys(body).length === 0) {
@@ -28,16 +68,20 @@ export async function PATCH(request: Request) {
   }
 
   try {
-    const { genres, ...rest } = body;
+    const { genres, genreIds, ...rest } = body;
     const data: any = { ...rest };
     const bookId = Number(id);
 
-    if (genres) {
+    if (genreIds) {
+      data.genres = {
+        set: genreIds.map((id) => ({ id: Number(id) })),
+      };
+    } else if (genres) {
       data.genres = {
         set: genres.map((g) => ({ id: Number(g.id) })),
       };
     }
-   
+
     const updatedBook = await prisma.book.update({
       where: { id: bookId },
       data: data,
@@ -55,9 +99,11 @@ export async function PATCH(request: Request) {
   }
 }
 
-export async function DELETE(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const id = searchParams.get("id");
+export async function DELETE(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
+  const id = params.id;
 
   if (!id) {
     return Response.json(

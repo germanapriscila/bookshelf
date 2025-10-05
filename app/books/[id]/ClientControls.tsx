@@ -17,7 +17,7 @@ export function ClientBookControls({ book }: ClientBookControlsProps) {
 
   const handleDelete = async () => {
     try {
-      await deleteBook(book.id);
+      await deleteBook(book.id.toString());
       router.push("/books");
       router.refresh();
     } catch (error) {

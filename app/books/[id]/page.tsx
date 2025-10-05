@@ -4,9 +4,12 @@ import { ClientBookControls } from "./ClientControls";
 import { notFound } from "next/navigation";
 
 const statusLabels: Record<string, string> = {
-  "to-read": "Para Ler",
-  reading: "Lendo",
-  finished: "Finalizado",
+  TO_READ: "Para Ler",
+  READING: "Lendo",
+  READ: "Lido",
+  PAUSED: "Pausado",
+  FINISHED: "Finalizado",
+  ABANDONED: "Abandonado",
 };
 
 interface PageProps {
@@ -53,10 +56,16 @@ export default async function BookDetailsPage({ params }: PageProps) {
               {/* Badge de Status */}
               <span
                 className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${
-                  book.status === "finished"
+                  book.status === "FINISHED"
                     ? "bg-green-100 text-green-800"
-                    : book.status === "reading"
+                    : book.status === "READING"
                     ? "bg-blue-100 text-blue-800"
+                    : book.status === "PAUSED"
+                    ? "bg-yellow-100 text-yellow-800"
+                    : book.status === "ABANDONED"
+                    ? "bg-red-100 text-red-800"
+                    : book.status === "READ"
+                    ? "bg-emerald-100 text-emerald-800"
                     : "bg-gray-100 text-gray-800"
                 }`}
               >
@@ -69,10 +78,19 @@ export default async function BookDetailsPage({ params }: PageProps) {
         <CardContent className="space-y-6">
           {/* Grid de Informações */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {book.genre && (
+            {book.genres && book.genres.length > 0 && (
               <div>
-                <h3 className="font-medium text-gray-700">Gênero</h3>
-                <p className="text-gray-900">{book.genre}</p>
+                <h3 className="font-medium text-gray-700">Gêneros</h3>
+                <div className="flex flex-wrap gap-2 mt-1">
+                  {book.genres.map((genre: { id: number; title: string }) => (
+                    <span
+                      key={genre.id}
+                      className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-50 text-blue-700"
+                    >
+                      {genre.title}
+                    </span>
+                  ))}
+                </div>
               </div>
             )}
 
