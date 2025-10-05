@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { Book } from '@/app/types/book';
 
+// Teste
 // Função auxiliar para construir URLs absolutas
 const BASE_URL = process.env.VERCEL_URL
     ? `https://${process.env.VERCEL_URL}`
