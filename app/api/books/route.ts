@@ -1,52 +1,69 @@
-import { NextResponse } from 'next/server';
-import { initialBooks } from '@/data/initialBooks';
-import { Book } from '@/app/types/book';
-
-// Declare o tipo global
-declare global {
-    var books: Book[];
-}
-
-// Inicializa os livros se ainda não existirem
-if (!global.books) {
-    global.books = [...initialBooks];
-}
+import { Book } from "@/app/types/book";
+import { prisma } from "../../../lib/prisma";
 
 export async function GET() {
-    return NextResponse.json(global.books);
+  const books = await prisma.book.findMany({
+    orderBy: {
+      createdAt: "desc",
+    },
+  });
+
+  return Response.json(books);
 }
 
 export async function POST(request: Request) {
-    try {
-        const bookData = await request.json();
+  const body: Book = await request.json();
 
-        if (!bookData.title || !bookData.author || !bookData.status) {
-            return NextResponse.json(
-                { error: 'Título, autor e status são obrigatórios' },
-                { status: 400 }
-            );
-        }
+  const {
+    title,
+    author,
+    genres,
+    pages,
+    totalPages,
+    currentPage,
+    status,
+    rating,
+    coverUrl,
+    synopsis,
+    isbn,
+    notes,
+  } = body;
 
-        // Generate a unique ID using timestamp and random number
-        const newId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  const genreArray = Array.isArray(genres) ? genres : [];
 
-        const newBook: Book = {
-            ...bookData,
-            id: newId,
-            createdAt: new Date(),
-            currentPage: bookData.currentPage ? Number(bookData.currentPage) : 0,
-            totalPages: bookData.totalPages ? Number(bookData.totalPages) : undefined,
-            rating: bookData.rating ? Number(bookData.rating) : undefined
-        };
+  if (!title || !author) {
+    return Response.json(
+      { error: "Título e autor são obrigatórios" },
+      { status: 400 }
+    );
+  }
 
-        global.books.push(newBook);
+  try {
+    const newBook = await prisma.book.create({
+      data: {
+        title,
+        author,
+        genres: {
+          connect: genreArray.map((g: { id: number }) => ({ id: g.id })),
+        },
+        pages: pages ? Number(pages) : null,
+        totalPages: totalPages ? Number(totalPages) : null,
+        currentPage: currentPage ? Number(currentPage) : null,
+        status: status || null,
+        rating: rating ? Number(rating) : null,
+        coverUrl: coverUrl || null,
+        synopsis: synopsis || null,
+        isbn: isbn || null,
+        notes: notes || null,
+      },
+      include: {
+        genres: true,
+      },
+    });
 
-        return NextResponse.json(newBook, { status: 201 });
-    } catch (error) {
-        console.error('Error creating book:', error);
-        return NextResponse.json(
-            { error: 'Erro ao criar livro' },
-            { status: 500 }
-        );
-    }
+    return Response.json(newBook, { status: 201 });
+  } catch (error) {
+    return Response.json({ error: "Erro ao criar livro." }, { status: 500 });
+  }
+
 }

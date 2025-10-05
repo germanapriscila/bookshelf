@@ -1,87 +1,81 @@
-import { NextResponse } from 'next/server';
-import { initialBooks } from '@/data/initialBooks';
-import { Book } from '@/app/types/book';
+import { prisma } from "../../../../lib/prisma";
 
-// Declare o tipo global
-declare global {
-    var books: Book[];
-}
+type BookUpdateBody = {
+  title?: string;
+  author?: string;
+  status?: string;
+  genres?: { id: number }[];
+  pages?: number;
+  currentPage?: number;
+  totalPages?: number;
+  rating?: number;
+  coverUrl?: string;
+  synopsis?: string;
+  isbn?: number;
+  notes?: string;
+};
 
-// Inicializa os livros se ainda não existirem
-if (!global.books) {
-    global.books = [...initialBooks];
-}
+export async function PATCH(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const id = searchParams.get("id");
+  const body = (await request.json()) as BookUpdateBody;
 
-export async function GET(
-    request: Request,
-    { params }: { params: { id: string } }
-) {
-    const book = global.books.find((b: Book) => b.id === params.id);
+  if (Object.keys(body).length === 0) {
+    return Response.json(
+      { error: "Nenhum campo alterado para atualização." },
+      { status: 400 }
+    );
+  }
 
-    if (!book) {
-        return NextResponse.json(
-            { error: 'Livro não encontrado' },
-            { status: 404 }
-        );
+  try {
+    const { genres, ...rest } = body;
+    const data: any = { ...rest };
+    const bookId = Number(id);
+
+    if (genres) {
+      data.genres = {
+        set: genres.map((g) => ({ id: Number(g.id) })),
+      };
     }
+   
+    const updatedBook = await prisma.book.update({
+      where: { id: bookId },
+      data: data,
+      include: {
+        genres: true,
+      },
+    });
 
-    return NextResponse.json(book);
+    return Response.json(updatedBook, { status: 200 });
+  } catch (error) {
+    return Response.json(
+      { error: "Erro ao atualizar livro." },
+      { status: 500 }
+    );
+  }
 }
 
-export async function PUT(
-    request: Request,
-    { params }: { params: { id: string } }
-) {
-    try {
-        const updatedData: Partial<Book> = await request.json();
-        const bookIndex = global.books.findIndex((b: Book) => b.id === params.id);
+export async function DELETE(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const id = searchParams.get("id");
 
-        if (bookIndex === -1) {
-            return NextResponse.json(
-                { error: 'Livro não encontrado' },
-                { status: 404 }
-            );
-        }
+  if (!id) {
+    return Response.json(
+      { error: "ID é obrigatório para exclusão." },
+      { status: 400 }
+    );
+  }
 
-        global.books[bookIndex] = {
-            ...global.books[bookIndex],
-            ...updatedData,
-        };
+  try {
+    await prisma.book.delete({
+      where: { id: Number(id) },
+    });
 
-        return NextResponse.json(global.books[bookIndex]);
-    } catch (error) {
-        return NextResponse.json(
-            { error: 'Dados do livro inválidos' },
-            { status: 400 }
-        );
-    }
-}
-
-export async function DELETE(
-    request: Request,
-    { params }: { params: { id: string } }
-) {
-    try {
-        const bookIndex = global.books.findIndex((b: Book) => b.id === params.id);
-
-        if (bookIndex === -1) {
-            return NextResponse.json(
-                { error: 'Livro não encontrado' },
-                { status: 404 }
-            );
-        }
-
-        global.books = global.books.filter((b: Book) => b.id !== params.id);
-
-        return NextResponse.json(
-            { message: 'Livro excluído com sucesso' },
-            { status: 200 }
-        );
-    } catch (error) {
-        console.error('Erro ao excluir livro:', error);
-        return NextResponse.json(
-            { error: 'Falha ao excluir o livro' },
-            { status: 500 }
-        );
-    }
+    return Response.json(
+      { message: "Livro deletado com sucesso." },
+      { status: 200 }
+    );
+  } catch (error) {
+    return Response.json({ error: "Erro ao deletar livro." }, { status: 500 });
+  }
 }
