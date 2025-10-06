@@ -51,12 +51,19 @@ export async function addBook(book: Omit<Book, 'id' | 'createdAt'>) {
 
 // Server action to update a book
 export async function updateBook(id: string, book: Partial<Book>) {
+    // Converter genreIds para o formato esperado pela API
+    const payload: any = { ...book };
+    if ('genreIds' in payload && Array.isArray(payload.genreIds)) {
+        payload.genres = payload.genreIds.map((id: number) => ({ id }));
+        delete payload.genreIds;
+    }
+
     const response = await fetch(`${BASE_URL}/api/books/${id}`, {
         method: 'PATCH',
         headers: {
             'Content-Type': 'application/json',
         },
-        body: JSON.stringify(book),
+        body: JSON.stringify(payload),
         cache: 'no-store'
     });
 
@@ -131,7 +138,7 @@ export async function getBooks() {
 
 // Server action to get all genres
 export async function getGenres() {
-    const response = await fetch(`${BASE_URL}/api/categories`, {
+    const response = await fetch(`${BASE_URL}/api/genres`, {
         cache: 'no-store',
         headers: {
             'Content-Type': 'application/json',
@@ -147,7 +154,7 @@ export async function getGenres() {
 
 // Server action to add a new genre
 export async function addGenre(genre: string) {
-    const response = await fetch(`${BASE_URL}/api/categories`, {
+    const response = await fetch(`${BASE_URL}/api/genres`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -167,7 +174,7 @@ export async function addGenre(genre: string) {
 // Server action to delete a genre
 export async function deleteGenre(genre: string) {
     const response = await fetch(
-        `${BASE_URL}/api/categories/genres/${encodeURIComponent(genre)}`,
+        `${BASE_URL}/api/genres/${encodeURIComponent(genre)}`,
         {
             method: 'DELETE',
             headers: {

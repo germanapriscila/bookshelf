@@ -1,34 +1,76 @@
-import { prisma } from "../../../lib/prisma";
+import { supabase } from "../../../lib/supabase";
 
-export async function GET() {
-  const books = await prisma.book.findMany({
-    orderBy: {
-      createdAt: "desc",
-    },
-    include: {
-      genres: true,
-    },
-  });
+// GET - listar livros (com filtro opcional)
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const term = searchParams.get("term")?.toLowerCase() ?? "";
 
-  return Response.json(books);
+  const { data, error } = await supabase
+    .from("books")
+    .select(`
+      *,
+      book_genres(
+        genre_id,
+        genres(id, title)
+      )
+    `)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    return Response.json(
+      { error: "Erro ao buscar livros", details: error.message },
+      { status: 500 }
+    );
+  }
+
+  const books = (data ?? []).map((book: any) => ({
+    id: book.id,
+    title: book.title,
+    author: book.author,
+    status: book.status,
+    pages: book.pages,
+    totalPages: book.total_pages,
+    currentPage: book.current_page,
+    rating: book.rating,
+    coverUrl: book.cover_url,
+    synopsis: book.synopsis,
+    isbn: book.isbn,
+    notes: book.notes,
+    createdAt: book.created_at,
+    genres: (book.book_genres ?? []).map((bg: any) => ({
+      id: bg.genres?.id,
+      title: bg.genres?.title ?? "",
+    })),
+  }));
+
+  if (!term) return Response.json(books);
+
+  const filtered = books.filter((book) =>
+    book.title?.toLowerCase().includes(term) ||
+    book.author?.toLowerCase().includes(term) ||
+    (book.synopsis ?? "").toLowerCase().includes(term) ||
+    book.genres?.some((g: { title: any; }) => (g.title ?? "").toLowerCase().includes(term))
+  );
+
+  return Response.json(filtered);
 }
 
+// POST - criar livro
 export async function POST(request: Request) {
   const body = await request.json();
-
   const {
     title,
     author,
-    genres,
+    status,
     pages,
     totalPages,
     currentPage,
-    status,
     rating,
     coverUrl,
     synopsis,
     isbn,
     notes,
+    genres,
   } = body;
 
   if (!title || !author || !status) {
@@ -38,80 +80,74 @@ export async function POST(request: Request) {
     );
   }
 
-  if (!['TO_READ', 'READING', 'READ', 'PAUSED', 'FINISHED', 'ABANDONED'].includes(status)) {
-    return Response.json(
-      { error: "Status inválido. Use TO_READ, READING, READ, PAUSED, FINISHED ou ABANDONED" },
-      { status: 400 }
-    );
-  }
-
   const genreArray = Array.isArray(genres) ? genres : [];
 
   try {
-    // Log dos dados recebidos para debug
-    console.log('Dados recebidos:', {
-      title,
-      author,
-      status,
-      genres: genreArray,
-      pages,
-      totalPages,
-      currentPage,
-      rating,
-      coverUrl,
-      synopsis,
-      isbn,
-      notes
-    });
+    // 1️⃣ Inserir livro
+    const { data: bookData, error: bookError } = await supabase
+      .from("books")
+      .insert([
+        {
+          title,
+          author,
+          status,
+          pages: pages ?? null,
+          total_pages: totalPages ?? null,
+          current_page: currentPage ?? null,
+          rating: rating ?? null,
+          cover_url: coverUrl ?? null,
+          synopsis: synopsis ?? null,
+          isbn: isbn ?? null,
+          notes: notes ?? null,
+        },
+      ])
+      .select();
 
-    // Preparar os dados base
-    const baseData = {
-      title,
-      author,
-      status,
-      pages: pages ? Number(pages) : undefined,
-      totalPages: totalPages ? Number(totalPages) : undefined,
-      currentPage: currentPage ? Number(currentPage) : undefined,
-      rating: rating ? Number(rating) : undefined,
-      coverUrl: coverUrl || undefined,
-      synopsis: synopsis || undefined,
-      isbn: isbn ? Number(isbn) : undefined,
-      notes: notes || undefined,
-    };
+    if (bookError) throw bookError;
+    const bookId = bookData[0].id;
 
-    // Criar objeto de dados com possíveis gêneros
-    const createData = {
-      ...baseData,
-      ...(genreArray.length > 0 ? {
-        genres: {
-          connect: genreArray.map((g: { id: number }) => ({ id: Number(g.id) }))
-        }
-      } : {})
-    };
-
-    // Criar o livro
-    const newBook = await prisma.book.create({
-      data: createData,
-      include: {
-        genres: true,
-      },
-    });
-
-    return Response.json(newBook, { status: 201 });
-  } catch (error) {
-    // Log do erro para debug
-    console.error('Erro ao criar livro:', error);
-
-    if (error instanceof Error) {
-      return Response.json({
-        error: "Erro ao criar livro",
-        details: error.message
-      }, { status: 500 });
+    // 2️⃣ Inserir gêneros
+    if (genreArray.length > 0) {
+      const bookGenres = genreArray.map((g: any) => ({
+        book_id: bookId,
+        genre_id: g.id,
+      }));
+      const { error: bgError } = await supabase
+        .from("book_genres")
+        .insert(bookGenres);
+      if (bgError) throw bgError;
     }
 
-    return Response.json({
-      error: "Erro desconhecido ao criar livro"
-    }, { status: 500 });
-  }
+    // 3️⃣ Retornar livro com gêneros (com JOIN correto)
+    const { data: insertedBook, error: fetchError } = await supabase
+      .from("books")
+      .select(`
+        *,
+        book_genres(
+          genre_id,
+          genres(id, title)
+        )
+      `)
+      .eq("id", bookId)
+      .single();
 
+    if (fetchError) throw fetchError;
+
+    return Response.json(
+      {
+        ...insertedBook,
+        genres: (insertedBook.book_genres ?? []).map((bg: any) => ({
+          id: bg.genres?.id,
+          title: bg.genres?.title ?? "",
+        })),
+      },
+      { status: 201 }
+    );
+  } catch (err) {
+    console.error(err);
+    return Response.json(
+      { error: "Erro ao criar livro", details: (err as Error).message },
+      { status: 500 }
+    );
+  }
 }
