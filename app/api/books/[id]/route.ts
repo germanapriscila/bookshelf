@@ -121,7 +121,7 @@ export async function DELETE(
       { message: "Livro deletado com sucesso." },
       { status: 200 }
     );
-  } catch (error) {
+  } catch {
     return Response.json({ error: "Erro ao deletar livro." }, { status: 500 });
   }
 }
