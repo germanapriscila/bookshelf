@@ -51,29 +51,33 @@ export async function addBook(book: Omit<Book, 'id' | 'createdAt'>) {
 
 // Server action to update a book
 export async function updateBook(id: string, book: Partial<Book>) {
-    // Converter genreIds para o formato esperado pela API
-    const payload: any = { ...book };
-    if ('genreIds' in payload && Array.isArray(payload.genreIds)) {
-        payload.genres = payload.genreIds.map((id: number) => ({ id }));
-        delete payload.genreIds;
-    }
+  const payload: Partial<Book> & {
+    genres?: Partial<Book["genres"]>;
+    genreIds?: number[];
+  } = { ...book };
+  if ("genreIds" in payload && Array.isArray(payload.genreIds)) {
+    payload.genres = payload.genreIds
+      .filter((id: number): id is number => id !== undefined)
+      .map((id: number) => ({ id })) as Book["genres"];
+    delete payload.genreIds;
+  }
 
-    const response = await fetch(`${BASE_URL}/api/books/${id}`, {
-        method: 'PATCH',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-        cache: 'no-store'
-    });
+  const response = await fetch(`${BASE_URL}/api/books/${id}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+    cache: "no-store",
+  });
 
-    if (!response.ok) {
-        throw new Error('Failed to update book');
-    }
+  if (!response.ok) {
+    throw new Error("Failed to update book");
+  }
 
-    revalidatePath('/books');
-    revalidatePath(`/books/${id}`);
-    return response.json();
+  revalidatePath("/books");
+  revalidatePath(`/books/${id}`);
+  return response.json();
 }
 
 // Server action to delete a book
