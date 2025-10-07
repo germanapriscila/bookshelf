@@ -1,4 +1,5 @@
 import { supabase } from "../../../lib/supabase";
+import { Book, Genre } from "../../types/book";
 
 // GET - listar livros (com filtro opcional)
 export async function GET(request: Request) {
@@ -23,7 +24,7 @@ export async function GET(request: Request) {
     );
   }
 
-  const books = (data ?? []).map((book: any) => ({
+  const books = (data ?? []).map((book) => ({
     id: book.id,
     title: book.title,
     author: book.author,
@@ -37,7 +38,7 @@ export async function GET(request: Request) {
     isbn: book.isbn,
     notes: book.notes,
     createdAt: book.created_at,
-    genres: (book.book_genres ?? []).map((bg: any) => ({
+    genres: (book.book_genres ?? []).map((bg: { genres?: { id: number; title: string } }) => ({
       id: bg.genres?.id,
       title: bg.genres?.title ?? "",
     })),
@@ -49,7 +50,7 @@ export async function GET(request: Request) {
     book.title?.toLowerCase().includes(term) ||
     book.author?.toLowerCase().includes(term) ||
     (book.synopsis ?? "").toLowerCase().includes(term) ||
-    book.genres?.some((g: { title: any; }) => (g.title ?? "").toLowerCase().includes(term))
+    book.genres?.some((g: { title: string }) => (g.title ?? "").toLowerCase().includes(term))
   );
 
   return Response.json(filtered);
@@ -108,7 +109,7 @@ export async function POST(request: Request) {
 
     // 2️⃣ Inserir gêneros
     if (genreArray.length > 0) {
-      const bookGenres = genreArray.map((g: any) => ({
+      const bookGenres = genreArray.map((g: Genre) => ({
         book_id: bookId,
         genre_id: g.id,
       }));
@@ -136,7 +137,7 @@ export async function POST(request: Request) {
     return Response.json(
       {
         ...insertedBook,
-        genres: (insertedBook.book_genres ?? []).map((bg: any) => ({
+        genres: (insertedBook.book_genres ?? []).map((bg: { genres?: { id: number; title: string } }) => ({
           id: bg.genres?.id,
           title: bg.genres?.title ?? "",
         })),

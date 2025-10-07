@@ -1,4 +1,5 @@
 import { supabase } from "../../../../lib/supabase";
+import { Book, Genre } from "../../../types/book";
 
 export async function GET(
   request: Request,
@@ -36,7 +37,7 @@ export async function GET(
     currentPage: data.current_page,
     coverUrl: data.cover_url,
     createdAt: data.created_at,
-    genres: (data.book_genres ?? []).map((bg: any) => ({
+    genres: (data.book_genres ?? []).map((bg: { genres?: { id: number; title: string } }) => ({
       id: bg.genres?.id,
       title: bg.genres?.title ?? "",
     })),
@@ -67,7 +68,7 @@ export async function PATCH(
   try {
     const { genres, totalPages, currentPage, coverUrl, book_genres, created_at, createdAt, ...rest } = body;
 
-    const updateData: any = {
+    const updateData = {
       ...rest,
     };
 
@@ -89,7 +90,7 @@ export async function PATCH(
       if (genres.length > 0) {
         await supabase
           .from("book_genres")
-          .insert(genres.map((g: any) => ({ book_id: id, genre_id: g.id })));
+          .insert(genres.map((g: Genre) => ({ book_id: id, genre_id: g.id })));
       }
     }
 
@@ -117,7 +118,7 @@ export async function PATCH(
       currentPage: updatedBook?.current_page,
       coverUrl: updatedBook?.cover_url,
       createdAt: updatedBook?.created_at,
-      genres: (updatedBook?.book_genres ?? []).map((bg: any) => ({
+      genres: (updatedBook?.book_genres ?? []).map((bg: { genres?: { id: number; title: string } }) => ({
         id: bg.genres?.id,
         title: bg.genres?.title ?? "",
       })),
